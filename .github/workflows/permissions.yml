@@ -1,0 +1,15 @@
+name: Update Repository Permissions
+
+on: [push]
+
+jobs:
+  update-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Make install script executable
+        run: |
+          git update-index --chmod=+x install.sh
+          git commit -m "Make install.sh executable"
+          git push
