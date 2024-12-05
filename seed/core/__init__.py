@@ -1,15 +1,11 @@
-"""SEED Core Components
+"""SEED Core Module
 
-Provides the fundamental building blocks of the SEED framework including:
-- Runtime environment management
-- Agent lifecycle handling
-- Configuration management
-- Event system
+Provides essential functionality for the SEED framework including:
+- Pre-flight system checks
+- Basic configuration
+- Common utilities
 """
 
-from .runtime import Runtime
-from .config import Config
-from .events import EventBus, Event
-from .exceptions import SeedError
+from .preflight import run_checks
 
-__all__ = ['Runtime', 'Config', 'EventBus', 'Event', 'SeedError']
+__all__ = ['run_checks']
