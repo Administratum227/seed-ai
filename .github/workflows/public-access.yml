@@ -1,0 +1,26 @@
+name: Ensure Public Access
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  setup-access:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set public access
+        run: |
+          git update-index --chmod=+x scripts/install.sh
+          git update-index --chmod=+x scripts/diagnose.sh
+          
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Update script permissions" || echo "No changes needed"
+          git push
