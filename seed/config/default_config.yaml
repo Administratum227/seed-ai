@@ -1,0 +1,60 @@
+# SEED AI Framework Configuration
+
+# Version
+version: "0.1.0"
+
+# Runtime Settings
+runtime:
+  max_agents: 10
+  task_concurrency: 5
+  log_level: INFO
+  storage_path: "~/.seed/data"
+  cache_path: "~/.seed/cache"
+  log_path: "~/.seed/logs"
+
+# API Integration
+api:
+  # Brave Search API settings
+  brave:
+    api_key: ""  # Set via BRAVE_API_KEY environment variable
+    cache_ttl: 3600  # Cache time-to-live in seconds
+    max_results: 20
+  
+  # GitHub API settings
+  github:
+    token: ""  # Set via GITHUB_TOKEN environment variable
+    default_branch: "main"
+    cache_ttl: 300
+
+# Agent Configuration
+agents:
+  # Default capabilities for new agents
+  default_capabilities:
+    - basic_reasoning
+    - task_planning
+    - web_search
+  
+  # Resource limits
+  limits:
+    memory_mb: 1024
+    startup_timeout_sec: 30
+    max_concurrent_tasks: 5
+
+# Dashboard Settings
+dashboard:
+  port: 8501
+  theme: dark
+  auto_launch: true
+  refresh_interval: 1.0  # seconds
+
+# Networking
+network:
+  request_timeout: 30
+  max_retries: 3
+  retry_delay: 1.0
+  
+# Security
+security:
+  encrypt_storage: true
+  encrypt_cache: true
+  encryption_key: ""  # Auto-generated if not provided
