@@ -8,61 +8,143 @@ BOLD="\033[1m"
 GREEN="\033[0;32m"
 BLUE="\033[0;34m"
 RED="\033[0;31m"
+YELLOW="\033[0;33m"
 NC="\033[0m"
 
 # Progress tracking
 STEPS_TOTAL=6
 CURRENT_STEP=0
 
-# Logging with progress
+# Stage confirmation
+confirm_stage() {
+    echo -e "\n${YELLOW}${BOLD}Continue with: ${NC}$1? [y/n] "
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        echo -e "\n${YELLOW}Installation cancelled by user${NC}"
+        rollback
+        exit 1
+    fi
+}
+
+# Rollback function
+rollback() {
+    echo -e "\n${YELLOW}${BOLD}Rolling back installation...${NC}"
+    
+    # Clean up virtual environment
+    if [ -d "$HOME/.seed/env" ]; then
+        echo "Removing virtual environment..."
+        rm -rf "$HOME/.seed/env"
+    fi
+    
+    # Remove launcher
+    if [ -f "$HOME/.local/bin/seed" ]; then
+        echo "Removing launcher..."
+        rm -f "$HOME/.local/bin/seed"
+    fi
+    
+    # Clean up temporary files
+    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+        echo "Cleaning up temporary files..."
+        rm -rf "$TMP_DIR"
+    fi
+    
+    # Offer to remove all SEED data
+    echo -e "\n${YELLOW}Would you like to remove all SEED data? (This will delete ~/.seed) [y/n]${NC} "
+    read -r response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        rm -rf "$HOME/.seed"
+        echo "All SEED data removed"
+    fi
+    
+    echo -e "${GREEN}Rollback complete${NC}"
+}
+
+# Progress display with substeps
 show_progress() {
     CURRENT_STEP=$((CURRENT_STEP + 1))
     PERCENTAGE=$((CURRENT_STEP * 100 / STEPS_TOTAL))
     FILLED=$((PERCENTAGE / 2))
     EMPTY=$((50 - FILLED))
     
-    # Create the progress bar
+    # Create progress bar
     PROGRESS=""
     for ((i=0; i<FILLED; i++)); do PROGRESS+="#"; done
     for ((i=0; i<EMPTY; i++)); do PROGRESS+="-"; done
     
-    # Show progress bar and message
-    echo -e "\r${BLUE}${BOLD}[$PROGRESS] ${PERCENTAGE}%${NC} $1"
+    # Show main progress
+    echo -e "\n${BLUE}${BOLD}[$PROGRESS] ${PERCENTAGE}%${NC}"
+    echo -e "${BOLD}Stage $CURRENT_STEP/$STEPS_TOTAL:${NC} $1"
 }
 
+# Substep progress
+show_substep() {
+    echo -e "  ${BLUE}→${NC} $1"
+}
+
+# Error handling
 log_error() { echo -e "\n${RED}${BOLD}Error:${NC} $1" >&2; }
+
+# Trap for cleanup on error
+trap 'echo -e "\n${RED}Installation failed${NC}"; rollback' ERR
 
 # Show title
 echo -e "\n${BOLD}SEED AI Framework Installer${NC}\n"
 
+# Initial confirmation
+confirm_stage "Start installation"
+
 # Check requirements
-show_progress "Checking requirements..."
-if ! command -v git &> /dev/null; then
-    log_error "Git is required but not installed. Please install git first."
+show_progress "Checking system requirements"
+show_substep "Checking Python installation..."
+if ! command -v python3 &> /dev/null; then
+    log_error "Python 3 is required but not installed"
     exit 1
 fi
 
-# Create temporary directory
-TMP_DIR=$(mktemp -d)
-show_progress "Preparing installation..."
+show_substep "Checking Git installation..."
+if ! command -v git &> /dev/null; then
+    log_error "Git is required but not installed"
+    exit 1
+fi
 
-# Clone repository
-show_progress "Downloading SEED framework..."
-git clone --quiet https://github.com/Administratum227/seed-ai.git "$TMP_DIR"
+show_substep "Checking disk space..."
+MIN_SPACE=500  # MB
+AVAIL_SPACE=$(df -m "$HOME" | awk 'NR==2 {print $4}')
+if [ "$AVAIL_SPACE" -lt "$MIN_SPACE" ]; then
+    log_error "Insufficient disk space. Need ${MIN_SPACE}MB, have ${AVAIL_SPACE}MB"
+    exit 1
+fi
 
-# Setup environment
-show_progress "Setting up environment..."
-mkdir -p "$HOME/.seed"
+# Environment setup
+confirm_stage "Set up environment"
+show_progress "Preparing environment"
+
+show_substep "Creating SEED directories..."
+mkdir -p "$HOME/.seed"{,/config,/data,/cache,/logs,/agents}
+
+show_substep "Creating virtual environment..."
 python3 -m venv "$HOME/.seed/env"
 source "$HOME/.seed/env/bin/activate"
 
-# Install package
-show_progress "Installing SEED framework..."
+# Framework installation
+confirm_stage "Install SEED framework"
+show_progress "Installing framework"
+
+show_substep "Creating temporary directory..."
+TMP_DIR=$(mktemp -d)
+
+show_substep "Cloning repository..."
+git clone --quiet https://github.com/Administratum227/seed-ai.git "$TMP_DIR"
+
+show_substep "Installing package..."
 cd "$TMP_DIR"
 pip install --quiet -e .
 
-# Create launcher
-show_progress "Creating launcher..."
+# Launcher setup
+confirm_stage "Create launcher"
+show_progress "Setting up launcher"
+
+show_substep "Creating launcher script..."
 mkdir -p "$HOME/.local/bin"
 cat > "$HOME/.local/bin/seed" << 'EOL'
 #!/bin/bash
@@ -71,16 +153,18 @@ exec seed "$@"
 EOL
 chmod +x "$HOME/.local/bin/seed"
 
-# Update PATH
+show_substep "Updating PATH..."
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
     [ -f "$HOME/.zshrc" ] && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
 fi
 
 # Cleanup
+show_progress "Finalizing installation"
+show_substep "Cleaning up temporary files..."
 rm -rf "$TMP_DIR"
 
-# Show completion message
+# Final confirmation
 echo -e "\n${GREEN}${BOLD}Installation Complete!${NC}"
 echo -e "\nTo get started:"
 echo -e "1. Close and reopen your terminal, or run:"
@@ -88,3 +172,10 @@ echo -e "   source ~/.bashrc  # for bash"
 echo -e "   source ~/.zshrc   # for zsh"
 echo -e "\n2. Then launch the dashboard:"
 echo -e "   seed"
+
+# Offer immediate launch
+echo -e "\n${YELLOW}Would you like to launch SEED now? [y/n]${NC} "
+read -r response
+if [[ "$response" =~ ^[Yy]$ ]]; then
+    exec seed
+fi
