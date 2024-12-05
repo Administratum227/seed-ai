@@ -1,34 +1,37 @@
 # SEED AI Framework
 
-## One-Line Installation
+## Quick Install
 
-Install SEED on any system with a single command:
-
-```bash
-curl -sSL https://seed-ai.dev/install | bash
-```
-
-Or using Python (if already installed):
+Install SEED with a single command:
 
 ```bash
-pip install seed-ai-framework
+curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/scripts/install.sh | bash
 ```
 
 ## Features
 
-- Zero-dependency installation on fresh systems
+- Zero-dependency installation
 - Automatic environment setup
-- Platform-specific optimizations
-- Isolated Python environment
-- Comprehensive system configuration
+- Virtual environment isolation
+- Cross-platform support (macOS & Linux)
 
-## Requirements
+## Manual Installation
 
-- macOS 10.15+ or Linux (Ubuntu/Debian/Fedora)
-- Internet connection
-- Admin privileges (for system dependencies)
+If you prefer to install manually:
 
-## Post-Installation
+```bash
+# Create virtual environment
+python3 -m venv ~/.seed/env
+source ~/.seed/env/bin/activate
+
+# Install SEED
+pip install seed-ai-framework
+
+# Initialize
+seed init
+```
+
+## Getting Started
 
 After installation, launch the dashboard:
 
@@ -38,8 +41,4 @@ seed dashboard
 
 ## Documentation
 
-Visit [docs.seed-ai.dev](https://docs.seed-ai.dev) for complete documentation.
-
-## License
-
-MIT License - see LICENSE for details.
+For full documentation, visit the [Wiki](https://github.com/Administratum227/seed-ai/wiki)
