@@ -1,51 +1,63 @@
 # SEED AI Framework
 
-A framework for creating, managing, and orchestrating AI agents powered by Claude.
+Scalable Ecosystem for Evolving Digital Agents - A framework for creating, managing, and orchestrating AI agents.
 
-## Zero-Dependency Installation
+## Quick Installation
 
-Install SEED with a single command on any fresh system:
+Install SEED on any system with a single command:
 
 ```bash
+# Option 1: Direct installation
 curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/scripts/install.sh | bash
-```
 
-This will:
-- Install all required system dependencies
-- Set up Python environment
-- Configure SEED framework
-- Create launch scripts
+# Option 2: Download and verify first
+wget https://raw.githubusercontent.com/Administratum227/seed-ai/main/scripts/install.sh
+chmod +x install.sh
+./install.sh
+```
 
 ## Features
 
-- 🤖 Easy AI agent creation and management
-- 🔄 Built-in task orchestration
-- 🌐 API integrations (Brave Search, GitHub)
+- 🤖 Zero-configuration agent creation and management
+- 🔄 Built-in task orchestration and scheduling
+- 🌐 Integrated API support (Brave Search, GitHub)
 - 📊 Real-time monitoring dashboard
-- 🛠️ Zero-configuration setup
-- 🔒 Secure virtual environment isolation
+- 🛠️ Automated dependency management
+- 🔒 Secure environment isolation
 
-## Requirements
+## System Requirements
 
 - macOS 10.15+ or Linux (Ubuntu/Debian/Fedora)
-- Internet connection
-- Admin privileges (for initial setup only)
+- Internet connection for initial setup
+- Admin privileges (only for system dependencies)
+
+## Directory Structure
+
+```
+~/.seed/
+├── config/         # Configuration files
+├── data/           # Agent data storage
+├── cache/          # API response cache
+├── logs/           # System logs
+└── agents/         # Agent state files
+```
 
 ## Troubleshooting
 
-If you encounter installation issues, run our diagnostic tool:
+If you encounter issues during installation:
 
 ```bash
+# Run diagnostic tool
 curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/scripts/diagnose.sh | bash
 ```
 
-The tool will:
-- Check system requirements
-- Verify dependencies
-- Validate configuration
-- Generate a diagnostic report
+The diagnostic tool will:
+- Verify system requirements
+- Check dependencies
+- Validate configurations
+- Generate detailed report
 
-## Getting Started
+## Quick Start
 
 After installation:
 
@@ -54,12 +66,12 @@ After installation:
    seed dashboard
    ```
 
-2. Create your first agent:
+2. Create an agent:
    ```bash
    seed create my-agent --capabilities "web_search,task_planning"
    ```
 
-3. Monitor agent status:
+3. Monitor status:
    ```bash
    seed status my-agent
    ```
@@ -68,8 +80,23 @@ After installation:
 
 - [User Guide](docs/user-guide.md)
 - [API Reference](docs/api-reference.md)
-- [Configuration](docs/configuration.md)
-- [Troubleshooting](docs/troubleshooting.md)
+- [Configuration Guide](docs/configuration.md)
+- [Development Guide](docs/development.md)
+
+## Development
+
+```bash
+# Clone repository
+git clone https://github.com/Administratum227/seed-ai.git
+cd seed-ai
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -e ".[dev]"
+```
 
 ## Contributing
 
