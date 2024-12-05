@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seed-ai-framework"
+version = "0.1.0"
+description = "Scalable Ecosystem for Evolving Digital Agents"
+authors = [{name = "SEED AI Framework Team"}]
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "aiohttp>=3.8.0",
+    "pyyaml>=6.0",
+    "rich>=10.0.0",
+    "typer>=0.4.0",
+    "textual>=0.1.18",
+    "cryptography>=36.0.0",
+    "pydantic>=1.9.0",
+    "anthropic>=0.3.0",
+]
+
+[project.scripts]
+seed = "seed.cli:main"
