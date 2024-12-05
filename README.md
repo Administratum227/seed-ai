@@ -1,89 +1,122 @@
-# SEED AI Framework 🌱
+# SEED AI Framework
 
-A zero-configuration framework for creating, managing, and orchestrating AI agents.
+## Zero-Dependency Installation
 
-## Quick Start
+Choose your preferred installation method:
 
-Install SEED with a single command:
-
+### Method 1: Direct Installation (Quick)
 ```bash
-curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/install.sh | bash
 ```
 
-This command:
-- Detects your operating system
-- Installs required dependencies
-- Creates an isolated environment
-- Sets up the command-line interface
+### Method 2: Secure Installation (Recommended)
+```bash
+# Download installer
+curl -O https://raw.githubusercontent.com/Administratum227/seed-ai/main/install.sh
 
-## Core Features
+# Review the script (optional but recommended)
+less install.sh
 
-- 🤖 Intuitive AI Agent Creation
-- 🔄 Built-in Task Orchestration
-- 🌐 Integrated API Support
-- 📊 Real-time Dashboard
-- 🛠️ Zero-config Setup
-- 🔒 Secure Environment
+# Make executable and run
+chmod +x install.sh
+./install.sh
+```
+
+### Method 3: Git-based Installation (Most Reliable)
+```bash
+# Clone repository
+git clone https://github.com/Administratum227/seed-ai.git
+
+# Run installer
+bash seed-ai/install.sh
+```
 
 ## System Requirements
 
 - macOS 10.15+ or Linux (Ubuntu/Debian/Fedora)
-- Internet connection (for installation only)
+- Internet connection (for initial setup)
 - Admin privileges (for system dependencies)
 
-## Getting Started
+## Architecture Overview
 
-After installation:
-
-1. Launch the dashboard:
-   ```bash
-   seed dashboard
-   ```
-
-2. Create your first agent:
-   ```bash
-   seed create researcher --capabilities "web_search,analysis"
-   ```
-
-3. Monitor agent activity:
-   ```bash
-   seed status researcher
-   ```
+```
+┌─────────────────┐
+│  SEED Framework │
+├─────────────────┴──────────────┐
+│ ┌──────────┐    ┌──────────┐   │
+│ │  Agents  │<───│  Tasks   │   │
+│ └──────────┘    └──────────┘   │
+│ ┌──────────┐    ┌──────────┐   │
+│ │   API    │<───│ Runtime  │   │
+│ └──────────┘    └──────────┘   │
+└────────────────────────────────┘
+```
 
 ## Directory Structure
 
 ```
 ~/.seed/
-├── config/        # Configuration files
-├── data/          # Agent data storage
-├── cache/         # API response cache
-├── logs/          # System logs
-└── agents/        # Agent state files
+├── config/          # Configuration files
+├── data/            # Agent data storage
+├── cache/           # API response cache
+├── logs/            # System logs
+└── agents/          # Agent state files
+```
+
+## Quick Start Guide
+
+After installation:
+
+1. Launch the dashboard:
+```bash
+seed dashboard
+```
+
+2. Create an agent:
+```bash
+seed create researcher --capabilities "web_search,analysis"
+```
+
+3. Monitor status:
+```bash
+seed status researcher
 ```
 
 ## Troubleshooting
 
-If you encounter issues, run our diagnostic tool:
+If you encounter issues:
 
+1. Run the diagnostic tool:
 ```bash
-curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/scripts/diagnose.sh | bash
+seed doctor
+```
+
+2. Check the logs:
+```bash
+cat ~/.seed/logs/seed.log
+```
+
+3. Verify installation:
+```bash
+seed verify
 ```
 
 ## Documentation
 
-- [User Guide](docs/user-guide.md): Getting started guide
-- [API Reference](docs/api-reference.md): Complete API documentation
-- [Configuration](docs/configuration.md): Configuration options
-- [Architecture](docs/architecture.md): System design and patterns
+- [Getting Started](docs/getting-started.md)
+- [User Guide](docs/user-guide.md)
+- [API Reference](docs/api-reference.md)
+- [Configuration](docs/configuration.md)
+- [Development Guide](docs/development.md)
 
-## Development
+## Development Setup
 
 ```bash
 # Clone repository
 git clone https://github.com/Administratum227/seed-ai.git
 cd seed-ai
 
-# Create development environment
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate
 
@@ -93,7 +126,7 @@ pip install -e ".[dev]"
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 
 ## License
 
