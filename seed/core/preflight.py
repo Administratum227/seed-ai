@@ -4,6 +4,7 @@ Provides comprehensive system checks and validation for the SEED framework.
 Ensures all requirements are met before launching components.
 """
 
+import os
 import sys
 import platform
 from pathlib import Path
