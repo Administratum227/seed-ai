@@ -1,17 +1,59 @@
 #!/bin/bash
-# SEED AI Framework Installation Bootstrap
-# This script fetches and executes the main installer
 
-# Fetch installer using GitHub API
-curl -H "Accept: application/vnd.github.v3.raw" \
-     -L "https://api.github.com/repos/Administratum227/seed-ai/contents/scripts/install.sh" \
-     -o seed-install.sh
+# SEED AI Framework Installer
+set -e
 
-# Make it executable
-chmod +x seed-install.sh
+# Style definitions
+BOLD="\033[1m"
+GREEN="\033[0;32m"
+BLUE="\033[0;34m"
+RED="\033[0;31m"
+NC="\033[0m"
 
-# Run installer
-./seed-install.sh
+# Logging
+log_info() { echo -e "${BLUE}${BOLD}==>${NC} $1"; }
+log_success() { echo -e "${GREEN}${BOLD}✓${NC} $1"; }
+log_error() { echo -e "${RED}${BOLD}Error:${NC} $1" >&2; }
+
+# Clone repository
+TMP_DIR=$(mktemp -d)
+log_info "Cloning SEED repository..."
+git clone https://github.com/Administratum227/seed-ai.git "$TMP_DIR"
+
+# Create virtual environment
+log_info "Creating virtual environment..."
+mkdir -p "$HOME/.seed"
+python3 -m venv "$HOME/.seed/env"
+source "$HOME/.seed/env/bin/activate"
+
+# Install package
+log_info "Installing SEED framework..."
+cd "$TMP_DIR"
+pip install -e .
+
+# Create launcher
+log_info "Creating launcher..."
+mkdir -p "$HOME/.local/bin"
+cat > "$HOME/.local/bin/seed" << 'EOL'
+#!/bin/bash
+source "$HOME/.seed/env/bin/activate"
+exec seed "$@"
+EOL
+chmod +x "$HOME/.local/bin/seed"
+
+# Update PATH
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    [ -f "$HOME/.zshrc" ] && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+fi
 
 # Cleanup
-rm seed-install.sh
+rm -rf "$TMP_DIR"
+
+log_success "Installation complete!"
+echo -e "\nTo get started:"
+echo -e "1. Close and reopen your terminal, or run:"
+echo -e "   source ~/.bashrc  # for bash"
+echo -e "   source ~/.zshrc   # for zsh"
+echo -e "\n2. Then launch the dashboard:"
+echo -e "   seed"
