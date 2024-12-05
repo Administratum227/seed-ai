@@ -8,6 +8,7 @@ Commands:
     verify      Check installation and dependencies
 """
 
+import sys
 import typer
 from pathlib import Path
 from typing import Optional
@@ -45,7 +46,7 @@ def launch(
     )
 ):
     """Launch the SEED dashboard interface."""
-    from ..dashboard import launch_dashboard
+    from ..dashboard.app import launch_dashboard
     console.print("[bold blue]Launching SEED Dashboard...[/bold blue]")
     launch_dashboard(host=host, port=port)
 
