@@ -1,0 +1,21 @@
+name: Update Script Permissions
+
+on:
+  push:
+    paths:
+      - 'scripts/**'
+
+jobs:
+  update-permissions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/*.sh
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add scripts/*.sh
+          git commit -m "Make scripts executable" || echo "No changes to commit"
+          git push
