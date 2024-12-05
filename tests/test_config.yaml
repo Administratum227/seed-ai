@@ -1,0 +1,28 @@
+# Test configuration
+version: 1.0.0
+
+logging:
+  level: DEBUG
+  format: '%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)'
+  date_format: '%Y-%m-%d %H:%M:%S'
+
+security:
+  sandbox:
+    enabled: true
+    permissions: minimal
+    resource_limits:
+      memory: 512M
+      cpu: 50
+      fsize: 1048576  # 1MB
+      nofile: 64
+
+capabilities:
+  conversation:
+    max_history: 10
+    max_response_length: 1000
+    keep_timestamps: true
+  
+  task_executor:
+    max_concurrent_tasks: 5
+    task_timeout: 300
+    retry_attempts: 3
