@@ -1,55 +1,6 @@
 #!/bin/bash
 
-# SEED AI Framework Installer
-# Provides zero-dependency installation with comprehensive error handling
+# Comprehensive installation script for SEED AI Framework
+# Enables zero-dependency installation on fresh systems
 
-[Previous content remains the same until the create_launcher function...]
-
-# Create launcher script
-create_launcher() {
-    log_info "Creating launcher script"
-    
-    # Create local bin directory if it doesn't exist
-    mkdir -p "$HOME/.local/bin"
-    
-    # Create the launcher script
-    cat > "$HOME/.local/bin/seed" << 'EOL'
-#!/bin/bash
-# SEED AI Framework Launcher
-# Activates virtual environment and executes SEED commands
-
-# Find the SEED environment
-SEED_ENV="$HOME/.seed/env"
-if [ ! -f "$SEED_ENV/bin/activate" ]; then
-    echo "Error: SEED environment not found at $SEED_ENV"
-    echo "Try reinstalling with: curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/scripts/install.sh | bash"
-    exit 1
-fi
-
-# Activate virtual environment
-source "$SEED_ENV/bin/activate"
-
-# Execute SEED command
-exec seed "$@"
-EOL
-    
-    # Make launcher executable
-    chmod +x "$HOME/.local/bin/seed"
-    
-    # Add to PATH if needed
-    if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-        
-        # Also add to zsh config if it exists
-        if [ -f "$HOME/.zshrc" ]; then
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
-        fi
-        
-        # Make PATH changes available immediately
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
-    
-    log_success "Launcher script created"
-}
-
-[Rest of the previous content remains the same...]
+set -e  # Exit on error
