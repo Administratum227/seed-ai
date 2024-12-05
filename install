@@ -10,29 +10,59 @@ BLUE="\033[0;34m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-# Logging
-log_info() { echo -e "${BLUE}${BOLD}==>${NC} $1"; }
-log_success() { echo -e "${GREEN}${BOLD}✓${NC} $1"; }
-log_error() { echo -e "${RED}${BOLD}Error:${NC} $1" >&2; }
+# Progress tracking
+STEPS_TOTAL=6
+CURRENT_STEP=0
+
+# Logging with progress
+show_progress() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    PERCENTAGE=$((CURRENT_STEP * 100 / STEPS_TOTAL))
+    FILLED=$((PERCENTAGE / 2))
+    EMPTY=$((50 - FILLED))
+    
+    # Create the progress bar
+    PROGRESS=""
+    for ((i=0; i<FILLED; i++)); do PROGRESS+="#"; done
+    for ((i=0; i<EMPTY; i++)); do PROGRESS+="-"; done
+    
+    # Show progress bar and message
+    echo -e "\r${BLUE}${BOLD}[$PROGRESS] ${PERCENTAGE}%${NC} $1"
+}
+
+log_error() { echo -e "\n${RED}${BOLD}Error:${NC} $1" >&2; }
+
+# Show title
+echo -e "\n${BOLD}SEED AI Framework Installer${NC}\n"
+
+# Check requirements
+show_progress "Checking requirements..."
+if ! command -v git &> /dev/null; then
+    log_error "Git is required but not installed. Please install git first."
+    exit 1
+fi
+
+# Create temporary directory
+TMP_DIR=$(mktemp -d)
+show_progress "Preparing installation..."
 
 # Clone repository
-TMP_DIR=$(mktemp -d)
-log_info "Cloning SEED repository..."
-git clone https://github.com/Administratum227/seed-ai.git "$TMP_DIR"
+show_progress "Downloading SEED framework..."
+git clone --quiet https://github.com/Administratum227/seed-ai.git "$TMP_DIR"
 
-# Create virtual environment
-log_info "Creating virtual environment..."
+# Setup environment
+show_progress "Setting up environment..."
 mkdir -p "$HOME/.seed"
 python3 -m venv "$HOME/.seed/env"
 source "$HOME/.seed/env/bin/activate"
 
 # Install package
-log_info "Installing SEED framework..."
+show_progress "Installing SEED framework..."
 cd "$TMP_DIR"
-pip install -e .
+pip install --quiet -e .
 
 # Create launcher
-log_info "Creating launcher..."
+show_progress "Creating launcher..."
 mkdir -p "$HOME/.local/bin"
 cat > "$HOME/.local/bin/seed" << 'EOL'
 #!/bin/bash
@@ -50,7 +80,8 @@ fi
 # Cleanup
 rm -rf "$TMP_DIR"
 
-log_success "Installation complete!"
+# Show completion message
+echo -e "\n${GREEN}${BOLD}Installation Complete!${NC}"
 echo -e "\nTo get started:"
 echo -e "1. Close and reopen your terminal, or run:"
 echo -e "   source ~/.bashrc  # for bash"
