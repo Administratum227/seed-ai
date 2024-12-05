@@ -1,0 +1,11 @@
+include LICENSE
+include README.md
+include pyproject.toml
+
+recursive-include seed *.py
+recursive-include seed/config *.yaml
+
+exclude *.pyc
+exclude __pycache__
+exclude *.pyo
+exclude .git*
