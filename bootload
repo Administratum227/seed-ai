@@ -17,6 +17,23 @@ MIN_PYTHON_VERSION="3.8"
 MIN_SPACE=500  # MB
 REPO_URL="https://github.com/Administratum227/seed-ai.git"
 BASE_PATH="$HOME/.seed"
+LOG_FILE="$BASE_PATH/logs/bootload.log"
+
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# Setup logging
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+# Error handling
+handle_error() {
+    log "ERROR: $1"
+    echo -e "\n${RED}${BOLD}Error:${NC} $1" >&2
+    cleanup
+    exit 1
+}
 
 # Parse command line arguments
 while [ $# -gt 0 ]; do
@@ -30,33 +47,57 @@ while [ $# -gt 0 ]; do
         --config=*)
             CONFIG_PATH="${1#*=}"
             ;;
+        --help)
+            echo "Usage: $0 [--mode=<mode>] [--agent=<type>] [--config=<path>]"
+            echo ""
+            echo "Options:"
+            echo "  --mode=<mode>    Set the agent operating mode (default: standard)"
+            echo "  --agent=<type>   Specify the agent type (default: assistant)"
+            echo "  --config=<path>  Path to custom configuration file"
+            echo "  --help          Show this help message"
+            exit 0
+            ;;
         *)
-            echo "Unknown parameter: $1"
-            exit 1
+            handle_error "Unknown parameter: $1"
             ;;
     esac
     shift
 done
 
-# Error handling
-handle_error() {
-    echo -e "\n${RED}${BOLD}Error:${NC} $1" >&2
-    cleanup
-    exit 1
-}
+# Cleanup function with state tracking
+TMP_DIRS=()
+CREATED_FILES=()
 
-# Cleanup function
 cleanup() {
-    echo -e "\n${YELLOW}${BOLD}Cleaning up...${NC}"
-    [ -d "$TMP_DIR" ] && rm -rf "$TMP_DIR"
-    [ -f "$HOME/.local/bin/seed-agent" ] && rm -f "$HOME/.local/bin/seed-agent"
+    log "Starting cleanup..."
+    
+    # Remove temporary directories
+    for dir in "${TMP_DIRS[@]}"; do
+        if [ -d "$dir" ]; then
+            log "Removing temporary directory: $dir"
+            rm -rf "$dir"
+        fi
+    done
+    
+    # Clean up created files on error
+    if [ $? -ne 0 ]; then
+        for file in "${CREATED_FILES[@]}"; do
+            if [ -f "$file" ]; then
+                log "Removing created file: $file"
+                rm -f "$file"
+            fi
+        done
+    fi
+    
+    log "Cleanup completed"
 }
 
-# Trap for cleanup on error
-trap 'cleanup' ERR
+# Trap for cleanup on error or exit
+trap cleanup EXIT
 
-# System validation
+# System validation with detailed checks
 validate_system() {
+    log "Validating system requirements..."
     echo -e "\n${BLUE}${BOLD}Validating system requirements...${NC}"
     
     # Check Python version
@@ -64,9 +105,9 @@ validate_system() {
         handle_error "Python 3 is required but not installed"
     fi
     
-    PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-    if [ "$(echo "$PYTHON_VERSION $MIN_PYTHON_VERSION" | awk '{print ($1 < $2)}')" -eq 1 ]; then
-        handle_error "Python $MIN_PYTHON_VERSION or higher is required"
+    PYTHON_VERSION=$(python3 -c 'import sys; print(".'.join(map(str, sys.version_info[:2])))')
+    if [ "$(echo "$PYTHON_VERSION $MIN_PYTHON_VERSION" | awk '{print ($1 < $2)}')"-eq 1 ]; then
+        handle_error "Python $MIN_PYTHON_VERSION or higher is required (found $PYTHON_VERSION)"
     fi
     
     # Check Git
@@ -79,21 +120,39 @@ validate_system() {
     if [ "$AVAIL_SPACE" -lt "$MIN_SPACE" ]; then
         handle_error "Insufficient disk space. Need ${MIN_SPACE}MB, have ${AVAIL_SPACE}MB"
     fi
+    
+    # Check network connectivity
+    if ! ping -c 1 github.com &> /dev/null; then
+        handle_error "No network connectivity to GitHub"
+    fi
+    
+    log "System validation completed successfully"
 }
 
-# Environment setup
+# Environment setup with progress tracking
 setup_environment() {
+    log "Setting up environment..."
     echo -e "\n${BLUE}${BOLD}Setting up environment...${NC}"
     
     # Create directory structure
-    mkdir -p "$BASE_PATH"/{env,config,data,cache,logs,agents}
+    mkdir -p "$BASE_PATH"/{env,config,data,cache,logs,agents,templates,plugins}
     
-    # Create virtual environment
-    python3 -m venv "$BASE_PATH/env"
-    source "$BASE_PATH/env/bin/activate"
+    # Create virtual environment with error checking
+    if ! python3 -m venv "$BASE_PATH/env"; then
+        handle_error "Failed to create virtual environment"
+    fi
+    
+    # Activate virtual environment
+    source "$BASE_PATH/env/bin/activate" || handle_error "Failed to activate virtual environment"
+    
+    # Upgrade pip
+    python3 -m pip install --upgrade pip &> "$LOG_FILE" || handle_error "Failed to upgrade pip"
     
     # Initialize configuration
     if [ -n "$CONFIG_PATH" ]; then
+        if [ ! -f "$CONFIG_PATH" ]; then
+            handle_error "Config file not found: $CONFIG_PATH"
+        fi
         cp "$CONFIG_PATH" "$BASE_PATH/config/config.yaml"
     else
         # Create default configuration
@@ -101,69 +160,110 @@ setup_environment() {
 version: 1.0.0
 agent:
   type: ${AGENT_TYPE:-assistant}
-  mode: ${MODE:-default}
+  mode: ${MODE:-standard}
 security:
   sandbox: true
   permissions: minimal
 logging:
   level: info
   path: ~/.seed/logs
+  rotation: daily
+plugins:
+  enabled: true
+  autoload: false
+api:
+  rate_limit: 100
+  timeout: 30
+resources:
+  max_memory: 512M
+  max_cpu: 50
 EOL
     fi
+    
+    CREATED_FILES+=("$BASE_PATH/config/config.yaml")
+    log "Environment setup completed"
 }
 
-# Core installation
+# Core installation with dependency management
 install_core() {
+    log "Installing core components..."
     echo -e "\n${BLUE}${BOLD}Installing core components...${NC}"
     
     # Create temporary directory
     TMP_DIR=$(mktemp -d)
+    TMP_DIRS+=("$TMP_DIR")
     
-    # Clone repository
-    git clone --quiet "$REPO_URL" "$TMP_DIR"
+    # Clone repository with depth 1 for faster download
+    if ! git clone --depth 1 --quiet "$REPO_URL" "$TMP_DIR"; then
+        handle_error "Failed to clone repository"
+    fi
     
-    # Install package
+    # Install required packages
     cd "$TMP_DIR"
-    pip install --quiet -e .
+    if ! pip install --quiet -r requirements.txt; then
+        handle_error "Failed to install dependencies"
+    fi
     
-    # Create launcher
+    # Install package in development mode
+    if ! pip install --quiet -e .; then
+        handle_error "Failed to install package"
+    fi
+    
+    # Create launcher script
     mkdir -p "$HOME/.local/bin"
     cat > "$HOME/.local/bin/seed-agent" << 'EOL'
 #!/bin/bash
 source "$HOME/.seed/env/bin/activate"
 exec seed-agent "$@"
 EOL
-    chmod +x "$HOME/.local/bin/seed-agent"
     
-    # Update PATH
+    chmod +x "$HOME/.local/bin/seed-agent"
+    CREATED_FILES+=("$HOME/.local/bin/seed-agent")
+    
+    # Update PATH if needed
     if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
         echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
         [ -f "$HOME/.zshrc" ] && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
     fi
+    
+    log "Core installation completed"
 }
 
-# Agent generation
+# Agent generation with template management
 generate_agent() {
+    log "Generating AI agent..."
     echo -e "\n${BLUE}${BOLD}Generating AI agent...${NC}"
     
     # Activate virtual environment
-    source "$BASE_PATH/env/bin/activate"
+    source "$BASE_PATH/env/bin/activate" || handle_error "Failed to activate virtual environment"
     
-    # Generate agent
-    seed-agent generate ${AGENT_TYPE:+--type "$AGENT_TYPE"} ${MODE:+--mode "$MODE"}
+    # Validate agent type if specified
+    if [ -n "$AGENT_TYPE" ]; then
+        if ! seed-agent validate-type "$AGENT_TYPE"; then
+            handle_error "Invalid agent type: $AGENT_TYPE"
+        fi
+    fi
+    
+    # Generate agent with progress tracking
+    if ! seed-agent generate ${AGENT_TYPE:+--type "$AGENT_TYPE"} ${MODE:+--mode "$MODE"}; then
+        handle_error "Failed to generate agent"
+    fi
+    
+    log "Agent generation completed"
 }
 
 # Main execution
 echo -e "\n${BOLD}SEED AI Agent Generator Bootloader${NC}"
+log "Starting bootloader..."
 
 validate_system
 setup_environment
 install_core
 generate_agent
 
-# Cleanup
-cleanup
-
+# Installation complete
 echo -e "\n${GREEN}${BOLD}Installation Complete!${NC}"
 echo -e "\nTo start your AI agent, run:"
 echo -e "seed-agent start"
+
+log "Bootloader completed successfully"
