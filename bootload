@@ -1,0 +1,169 @@
+#!/bin/bash
+
+# SEED AI Framework Bootloader
+# Version: 1.0.0
+set -e
+
+# Style definitions
+BOLD="\033[1m"
+GREEN="\033[0;32m"
+BLUE="\033[0;34m"
+RED="\033[0;31m"
+YELLOW="\033[0;33m"
+NC="\033[0m"
+
+# Constants
+MIN_PYTHON_VERSION="3.8"
+MIN_SPACE=500  # MB
+REPO_URL="https://github.com/Administratum227/seed-ai.git"
+BASE_PATH="$HOME/.seed"
+
+# Parse command line arguments
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --mode=*)
+            MODE="${1#*=}"
+            ;;
+        --agent=*)
+            AGENT_TYPE="${1#*=}"
+            ;;
+        --config=*)
+            CONFIG_PATH="${1#*=}"
+            ;;
+        *)
+            echo "Unknown parameter: $1"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Error handling
+handle_error() {
+    echo -e "\n${RED}${BOLD}Error:${NC} $1" >&2
+    cleanup
+    exit 1
+}
+
+# Cleanup function
+cleanup() {
+    echo -e "\n${YELLOW}${BOLD}Cleaning up...${NC}"
+    [ -d "$TMP_DIR" ] && rm -rf "$TMP_DIR"
+    [ -f "$HOME/.local/bin/seed-agent" ] && rm -f "$HOME/.local/bin/seed-agent"
+}
+
+# Trap for cleanup on error
+trap 'cleanup' ERR
+
+# System validation
+validate_system() {
+    echo -e "\n${BLUE}${BOLD}Validating system requirements...${NC}"
+    
+    # Check Python version
+    if ! command -v python3 &> /dev/null; then
+        handle_error "Python 3 is required but not installed"
+    fi
+    
+    PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+    if [ "$(echo "$PYTHON_VERSION $MIN_PYTHON_VERSION" | awk '{print ($1 < $2)}')" -eq 1 ]; then
+        handle_error "Python $MIN_PYTHON_VERSION or higher is required"
+    fi
+    
+    # Check Git
+    if ! command -v git &> /dev/null; then
+        handle_error "Git is required but not installed"
+    fi
+    
+    # Check disk space
+    AVAIL_SPACE=$(df -m "$HOME" | awk 'NR==2 {print $4}')
+    if [ "$AVAIL_SPACE" -lt "$MIN_SPACE" ]; then
+        handle_error "Insufficient disk space. Need ${MIN_SPACE}MB, have ${AVAIL_SPACE}MB"
+    fi
+}
+
+# Environment setup
+setup_environment() {
+    echo -e "\n${BLUE}${BOLD}Setting up environment...${NC}"
+    
+    # Create directory structure
+    mkdir -p "$BASE_PATH"/{env,config,data,cache,logs,agents}
+    
+    # Create virtual environment
+    python3 -m venv "$BASE_PATH/env"
+    source "$BASE_PATH/env/bin/activate"
+    
+    # Initialize configuration
+    if [ -n "$CONFIG_PATH" ]; then
+        cp "$CONFIG_PATH" "$BASE_PATH/config/config.yaml"
+    else
+        # Create default configuration
+        cat > "$BASE_PATH/config/config.yaml" << EOL
+version: 1.0.0
+agent:
+  type: ${AGENT_TYPE:-assistant}
+  mode: ${MODE:-default}
+security:
+  sandbox: true
+  permissions: minimal
+logging:
+  level: info
+  path: ~/.seed/logs
+EOL
+    fi
+}
+
+# Core installation
+install_core() {
+    echo -e "\n${BLUE}${BOLD}Installing core components...${NC}"
+    
+    # Create temporary directory
+    TMP_DIR=$(mktemp -d)
+    
+    # Clone repository
+    git clone --quiet "$REPO_URL" "$TMP_DIR"
+    
+    # Install package
+    cd "$TMP_DIR"
+    pip install --quiet -e .
+    
+    # Create launcher
+    mkdir -p "$HOME/.local/bin"
+    cat > "$HOME/.local/bin/seed-agent" << 'EOL'
+#!/bin/bash
+source "$HOME/.seed/env/bin/activate"
+exec seed-agent "$@"
+EOL
+    chmod +x "$HOME/.local/bin/seed-agent"
+    
+    # Update PATH
+    if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+        [ -f "$HOME/.zshrc" ] && echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+    fi
+}
+
+# Agent generation
+generate_agent() {
+    echo -e "\n${BLUE}${BOLD}Generating AI agent...${NC}"
+    
+    # Activate virtual environment
+    source "$BASE_PATH/env/bin/activate"
+    
+    # Generate agent
+    seed-agent generate ${AGENT_TYPE:+--type "$AGENT_TYPE"} ${MODE:+--mode "$MODE"}
+}
+
+# Main execution
+echo -e "\n${BOLD}SEED AI Agent Generator Bootloader${NC}"
+
+validate_system
+setup_environment
+install_core
+generate_agent
+
+# Cleanup
+cleanup
+
+echo -e "\n${GREEN}${BOLD}Installation Complete!${NC}"
+echo -e "\nTo start your AI agent, run:"
+echo -e "seed-agent start"
