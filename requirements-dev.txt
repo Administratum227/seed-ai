@@ -1,0 +1,7 @@
+-r requirements.txt
+
+# Additional development tools
+tox>=4.5.0  # For test automation
+pre-commit>=3.3.0  # For git hooks
+bandit>=1.7.0  # For security checks
+safety>=2.3.0  # For dependency security checks
