@@ -6,19 +6,22 @@ Focuses on common workflows and essential functionality.
 Commands:
     launch      Launch the dashboard (default)
     verify      Check installation and dependencies
-    configure   Update framework settings
 """
 
 import typer
 from pathlib import Path
 from typing import Optional
 from rich.console import Console
+from rich.traceback import install
+
+# Set up error handling
+install(show_locals=True)
+console = Console()
 
 app = typer.Typer(
     help="SEED: Scalable Ecosystem for Evolving Digital Agents",
     add_completion=False
 )
-console = Console()
 
 @app.command()
 def launch(
@@ -69,6 +72,21 @@ def verify(
         for warning in report["warnings"]:
             console.print(f"[yellow]⚠ {warning}[/yellow]")
 
-def cli():
-    """CLI entry point."""
-    app()
+def main():
+    """Main CLI entry point."""
+    try:
+        if len(sys.argv) == 1:
+            # No arguments - launch dashboard
+            launch()
+        else:
+            # Process CLI arguments
+            app()
+    except KeyboardInterrupt:
+        console.print("\n👋 Shutting down...")
+        sys.exit(0)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {str(e)}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
