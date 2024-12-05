@@ -19,6 +19,12 @@ log_info() { echo -e "${BLUE}${BOLD}==>${NC} $1"; }
 log_success() { echo -e "${GREEN}${BOLD}✓${NC} $1"; }
 log_error() { echo -e "${RED}${BOLD}Error:${NC} $1" >&2; }
 
+# Verify git installation
+if ! command -v git &> /dev/null; then
+    log_error "Git is required but not installed. Please install git first."
+    exit 1
+fi
+
 # Create directories
 log_info "Setting up SEED environment..."
 mkdir -p "$HOME/.seed/"{config,data,cache,logs,agents}
@@ -28,10 +34,13 @@ log_info "Creating virtual environment..."
 python3 -m venv "$HOME/.seed/env"
 source "$HOME/.seed/env/bin/activate"
 
-# Install SEED framework directly from GitHub
+# Install SEED directly from GitHub
 log_info "Installing SEED framework..."
 pip install --upgrade pip
-pip install git+https://github.com/Administratum227/seed-ai.git
+pip install git+https://github.com/Administratum227/seed-ai.git@main || {
+    log_error "Failed to install from GitHub"
+    exit 1
+}
 
 # Create launcher
 log_info "Creating launcher..."
