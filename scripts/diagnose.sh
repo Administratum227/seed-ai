@@ -1,14 +1,18 @@
 #!/bin/bash
 
 # SEED Diagnostic Tool
-# Helps troubleshoot installation and runtime issues
+# Comprehensive system and installation verification
+
+# Enable strict error handling
+set -euo pipefail
+IFS=$'\n\t'
 
 # Style definitions
 BOLD="\033[1m"
 GREEN="\033[0;32m"
 BLUE="\033[0;34m"
-RED="\033[0;31m"
 YELLOW="\033[0;33m"
+RED="\033[0;31m"
 NC="\033[0m"
 
 # Logging utilities
@@ -18,127 +22,107 @@ log_ok() { echo -e "${GREEN}${BOLD}[✓]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}${BOLD}[!]${NC} $1"; }
 log_error() { echo -e "${RED}${BOLD}[x]${NC} $1"; }
 
-check_path() {
-    log_header "PATH Configuration"
+# System information check
+check_system() {
+    log_header "System Information"
     
-    # Check if ~/.local/bin is in PATH
-    if [[ ":$PATH:" == *":$HOME/.local/bin:"* ]]; then
-        log_ok "~/.local/bin is in PATH"
-    else
-        log_error "~/.local/bin not in PATH"
-        echo "Add the following to your shell configuration:"
-        echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
-    fi
-    
-    # Check shell configuration files
-    local shell_configs=(
-        "$HOME/.bashrc"
-        "$HOME/.zshrc"
-        "$HOME/.bash_profile"
-    )
-    
-    for config in "${shell_configs[@]}"; do
-        if [ -f "$config" ]; then
-            if grep -q ".local/bin" "$config"; then
-                log_ok "PATH configured in $(basename "$config")"
+    # OS Information
+    log_check "Operating System:"
+    case "$(uname)" in
+        Darwin)
+            sw_vers
+            ;;
+        Linux)
+            if [ -f /etc/os-release ]; then
+                cat /etc/os-release | grep -E '^(NAME|VERSION)='
             else
-                log_warn "PATH not configured in $(basename "$config")"
+                uname -a
             fi
-        fi
-    done
+            ;;
+    esac
     
-    # Check launcher script
-    if [ -x "$HOME/.local/bin/seed" ]; then
-        log_ok "Launcher script exists and is executable"
+    # Hardware Resources
+    log_check "Hardware Resources:"
+    echo "CPU Cores: $(sysctl -n hw.ncpu 2>/dev/null || nproc)"
+    echo "Memory: $(vm_stat | grep 'Pages free:' | awk '{print $3}' 2>/dev/null || free -h)"
+    echo "Disk Space: $(df -h ~ | awk 'NR==2')"
+}
+
+# Python environment check
+check_python() {
+    log_header "Python Environment"
+    
+    # Check Python versions
+    if command -v python3 >/dev/null 2>&1; then
+        log_ok "Python 3 installed: $(python3 --version)"
     else
-        log_error "Launcher script missing or not executable"
+        log_error "Python 3 not found"
+    fi
+    
+    # Check virtual environment
+    if [ -f "$HOME/.seed/env/bin/python" ]; then
+        log_ok "Virtual environment exists"
+        echo "Version: $($HOME/.seed/env/bin/python --version)"
+        echo "Packages installed:"
+        $HOME/.seed/env/bin/pip list
+    else
+        log_error "Virtual environment not found"
     fi
 }
 
-# Permission check
-check_permissions() {
-    log_header "Permissions Check"
+# Directory structure check
+check_directories() {
+    log_header "SEED Directory Structure"
     
+    local dirs=("config" "data" "cache" "logs" "agents" "env")
     local seed_home="$HOME/.seed"
-    local check_paths=(
-        "$seed_home"
-        "$seed_home/config"
-        "$seed_home/data"
-        "$seed_home/cache"
-        "$seed_home/logs"
-        "$seed_home/agents"
-        "$seed_home/env"
-        "$HOME/.local/bin"
-    )
     
-    for path in "${check_paths[@]}"; do
-        if [ -e "$path" ]; then
-            local perms=$(stat -f "%A %u:%g" "$path" 2>/dev/null || stat -c "%a %u:%g" "$path")
-            local owner=$(stat -f "%Su:%Sg" "$path" 2>/dev/null || stat -c "%U:%G" "$path")
-            echo "$path: $perms ($owner)"
-            
-            # Check for common permission issues
-            if [ ! -r "$path" ]; then
-                log_error "Not readable: $path"
-            fi
-            if [ ! -w "$path" ]; then
-                log_error "Not writable: $path"
-            fi
-            if [ -d "$path" ] && [ ! -x "$path" ]; then
-                log_error "Not executable (required for directories): $path"
+    for dir in "${dirs[@]}"; do
+        if [ -d "$seed_home/$dir" ]; then
+            if [ -w "$seed_home/$dir" ]; then
+                log_ok "$dir: exists and writable"
+            else
+                log_warn "$dir: exists but not writable"
             fi
         else
-            log_error "Path does not exist: $path"
+            log_error "$dir: missing"
         fi
     done
 }
 
-# Dependency check
-check_dependencies() {
-    log_header "Required Dependencies"
+# Configuration check
+check_config() {
+    log_header "Configuration"
     
-    local deps=(
-        "python3:Python 3 runtime"
-        "pip:Python package manager"
-        "git:Version control"
-        "curl:Network requests"
+    local config_file="$HOME/.seed/config/config.yaml"
+    if [ -f "$config_file" ]; then
+        log_ok "Config file exists"
+        if [ -r "$config_file" ]; then
+            echo "Configuration contents:"
+            cat "$config_file"
+        else
+            log_error "Config file not readable"
+        fi
+    else
+        log_error "Config file missing"
+    fi
+}
+
+# Network connectivity check
+check_network() {
+    log_header "Network Connectivity"
+    
+    local endpoints=(
+        "raw.githubusercontent.com"
+        "api.github.com"
+        "pypi.org"
     )
     
-    for dep in "${deps[@]}"; do
-        IFS=':' read -r cmd desc <<< "$dep"
-        if command -v "$cmd" >/dev/null 2>&1; then
-            local version
-            case "$cmd" in
-                python3)
-                    version=$(python3 --version 2>&1)
-                    ;;
-                pip)
-                    version=$(pip --version 2>&1)
-                    ;;
-                git)
-                    version=$(git --version 2>&1)
-                    ;;
-                curl)
-                    version=$(curl --version 2>&1 | head -n 1)
-                    ;;
-            esac
-            log_ok "$desc: $version"
+    for endpoint in "${endpoints[@]}"; do
+        if curl -s --connect-timeout 5 "https://$endpoint" >/dev/null; then
+            log_ok "$endpoint: accessible"
         else
-            log_error "$desc not found"
-            case "$cmd" in
-                python3)
-                    echo "Install Python 3 from https://python.org"
-                    ;;
-                pip)
-                    echo "Usually installed with Python. Try: python3 -m ensurepip"
-                    ;;
-                git)
-                    echo "Install Git from https://git-scm.com"
-                    ;;
-                curl)
-                    echo "Install curl through your system package manager"
-                    ;;
-            esac
+            log_error "$endpoint: not accessible"
         fi
     done
 }
@@ -157,9 +141,6 @@ generate_report() {
         check_directories
         check_config
         check_network
-        check_path
-        check_permissions
-        check_dependencies
         
     } > "$report_file"
     
@@ -178,9 +159,6 @@ main() {
     check_directories
     check_config
     check_network
-    check_path
-    check_permissions
-    check_dependencies
     
     # Generate report
     generate_report
