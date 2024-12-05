@@ -1,0 +1,17 @@
+#!/bin/bash
+# SEED AI Framework Installation Bootstrap
+# This script fetches and executes the main installer
+
+# Fetch installer using GitHub API
+curl -H "Accept: application/vnd.github.v3.raw" \
+     -L "https://api.github.com/repos/Administratum227/seed-ai/contents/scripts/install.sh" \
+     -o seed-install.sh
+
+# Make it executable
+chmod +x seed-install.sh
+
+# Run installer
+./seed-install.sh
+
+# Cleanup
+rm seed-install.sh
