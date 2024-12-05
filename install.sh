@@ -1,16 +1,18 @@
 #!/bin/bash
-
+#
 # SEED AI Framework Installer
-# Zero-dependency installation script
+# Zero-dependency installation script for macOS and Linux
+#
+# Usage: curl -sSL https://raw.githubusercontent.com/Administratum227/seed-ai/main/install.sh | bash
 
-set -e  # Exit on error
+set -e  # Exit on any error
 
 # Style definitions
-BOLD="\033[1m"
-GREEN="\033[0;32m"
-BLUE="\033[0;34m"
-RED="\033[0;31m"
-NC="\033[0m"
+BOLD="\\033[1m"
+GREEN="\\033[0;32m"
+BLUE="\\033[0;34m"
+RED="\\033[0;31m"
+NC="\\033[0m"  # No Color
 
 # Logging utilities
 log_info() { echo -e "${BLUE}${BOLD}==>${NC} $1"; }
@@ -88,6 +90,7 @@ exec seed "$@"
 EOL
     chmod +x "$HOME/.local/bin/seed"
     
+    # Add to PATH if needed
     if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
         echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
         if [ -f "$HOME/.zshrc" ]; then
@@ -118,5 +121,5 @@ main() {
     echo -e "   seed dashboard"
 }
 
-# Run installation
+# Start installation
 main
