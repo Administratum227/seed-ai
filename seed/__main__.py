@@ -1,8 +1,11 @@
-"""
-SEED Framework Entry Point
--------------------------
-Provides the main entry point for the SEED framework, enabling simple
-single-command execution through `python -m seed` or the `seed` command.
+"""SEED Framework Entry Point
+
+Provides the main entry point for the SEED framework, enabling both interactive
+dashboard mode and command-line operation.
+
+Usage:
+    python -m seed          # Launch dashboard
+    python -m seed [cmd]    # Execute command
 """
 
 import sys
@@ -10,28 +13,22 @@ import logging
 from rich.console import Console
 from rich.traceback import install
 
-from .cli.core import launch_dashboard
-from .cli.commands import cli
-
-# Configure rich error handling
+# Enable rich error formatting
 install(show_locals=True)
 console = Console()
 
 def main():
-    """
-    Main entry point for SEED framework.
-    
-    If no arguments are provided, launches the terminal dashboard.
-    Otherwise, processes command line arguments through the CLI.
-    """
+    """Primary entry point for SEED framework."""
     try:
         if len(sys.argv) == 1:
-            # No arguments - launch dashboard
+            # No arguments - launch interactive dashboard
+            from seed.dashboard import launch_dashboard
+            console.print("[bold blue]SEED Framework Dashboard[/bold blue]")
             launch_dashboard()
         else:
-            # Process CLI arguments
+            # Process command line arguments
+            from seed.cli import cli
             cli()
-            
     except KeyboardInterrupt:
         console.print("\n👋 Shutting down...")
         sys.exit(0)
