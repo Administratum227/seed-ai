@@ -1,187 +1,109 @@
-"""Dashboard Application Implementation
+"""SEED Dashboard Application
 
-Implements a streamlined web interface for monitoring and managing SEED agents.
-Uses Streamlit for rapid development and rich interactive features.
+Implements the main terminal dashboard interface using Textual.
+Focuses on providing essential monitoring and control capabilities
+with a clean, intuitive interface.
 """
 
-import streamlit as st
-import logging
-from typing import Dict, Any
-import webbrowser
-from pathlib import Path
-import time
+from textual.app import App
+from textual.widgets import Header, Footer
+from textual.containers import Container
+from rich.console import Console
+from typing import Optional, Dict, Any
+import asyncio
 
-logger = logging.getLogger(__name__)
+from .components import MetricsPanel, AgentList
 
-class Dashboard:
+class Dashboard(App):
     """Main dashboard application.
     
-    Provides:
-    - Agent management interface
+    Features:
+    - Real-time metrics display
+    - Agent management
     - System monitoring
-    - Task visualization
-    - Configuration management
+    - Simple navigation
     """
     
-    def __init__(self, config: Dict[str, Any]):
-        """Initialize dashboard with configuration.
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("r", "refresh", "Refresh")
+    ]
+    
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize dashboard with optional configuration.
         
         Args:
-            config: Framework configuration dictionary
+            config: Configuration dictionary
         """
-        self.config = config
-        
-        # Initialize state
-        if 'initialized' not in st.session_state:
-            st.session_state.initialized = False
+        super().__init__()
+        self.config = config or {}
+        self.console = Console()
     
-    def render(self):
-        """Render the dashboard interface."""
-        st.set_page_config(
-            page_title="SEED Dashboard",
-            page_icon="🌱",
-            layout="wide"
-        )
+    def compose(self):
+        """Create and compose the interface layout."""
+        yield Header(show_clock=True)
         
-        # Main title
-        st.title("🌱 SEED Dashboard")
+        with Container():
+            yield MetricsPanel(id="metrics")
+            yield AgentList(id="agents")
         
-        if not st.session_state.initialized:
-            self._initialize_dashboard()
-        
-        # Sidebar navigation
-        self._render_sidebar()
-        
-        # Main content area
-        self._render_main_content()
+        yield Footer()
     
-    def _initialize_dashboard(self):
-        """Perform first-time dashboard initialization."""
-        # Set up initial state
-        st.session_state.current_view = "overview"
-        st.session_state.initialized = True
-        
-        # Load initial data
-        self._load_agent_data()
+    async def on_mount(self) -> None:
+        """Handle application mounting."""
+        # Start background tasks
+        self.set_interval(1.0, self.update_metrics)
     
-    def _render_sidebar(self):
-        """Render navigation sidebar."""
-        with st.sidebar:
-            st.header("Navigation")
+    async def update_metrics(self) -> None:
+        """Update displayed metrics."""
+        try:
+            # Get current metrics
+            metrics = await self._gather_metrics()
             
-            # Main navigation options
-            if st.button("📊 Overview", use_container_width=True):
-                st.session_state.current_view = "overview"
-            if st.button("🤖 Agents", use_container_width=True):
-                st.session_state.current_view = "agents"
-            if st.button("⚙️ Settings", use_container_width=True):
-                st.session_state.current_view = "settings"
-            
-            # System status
-            st.sidebar.markdown("---")
-            st.sidebar.header("System Status")
-            self._render_system_status()
-    
-    def _render_main_content(self):
-        """Render main content area based on current view."""
-        view = st.session_state.current_view
-        
-        if view == "overview":
-            self._render_overview()
-        elif view == "agents":
-            self._render_agents()
-        elif view == "settings":
-            self._render_settings()
-    
-    def _render_overview(self):
-        """Render system overview page."""
-        st.header("📊 System Overview")
-        
-        # Quick stats
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Active Agents", "0")
-        with col2:
-            st.metric("Tasks Completed", "0")
-        with col3:
-            st.metric("System Uptime", "0m")
-        
-        # Activity feed placeholder
-        st.subheader("📈 Recent Activity")
-        st.info("No recent activity")
-    
-    def _render_agents(self):
-        """Render agent management page."""
-        st.header("🤖 Agent Management")
-        
-        # New agent creation
-        with st.expander("➕ Create New Agent"):
-            st.text_input("Agent Name")
-            st.multiselect(
-                "Capabilities",
-                ["web_search", "task_planning", "analysis"]
+            # Update panels
+            self.query_one(MetricsPanel).update_metrics(metrics)
+            self.query_one(AgentList).update_agents(
+                await self._get_agent_status()
             )
-            st.button("Create Agent")
-        
-        # Agent list placeholder
-        st.subheader("📂 Active Agents")
-        st.info("No agents created yet")
+            
+        except Exception as e:
+            self.console.print(f"[red]Error updating metrics:[/red] {str(e)}")
     
-    def _render_settings(self):
-        """Render settings configuration page."""
-        st.header("⚙️ Settings")
-        
-        # Basic settings
-        st.subheader("General Settings")
-        st.text_input("API Key")
-        st.number_input("Max Agents", min_value=1, value=10)
-        st.checkbox("Enable Logging")
-        
-        # Save button
-        st.button("Save Settings")
+    async def _gather_metrics(self) -> Dict[str, Any]:
+        """Gather current system metrics."""
+        # TODO: Implement actual metric gathering
+        return {
+            'agents': 0,
+            'tasks': 0,
+            'cpu': 0.0,
+            'memory': 0.0
+        }
     
-    def _render_system_status(self):
-        """Render system status in sidebar."""
-        st.sidebar.metric("CPU Usage", "0%")
-        st.sidebar.metric("Memory Usage", "0%")
-        st.sidebar.metric("Disk Usage", "0%")
+    async def _get_agent_status(self) -> List[Dict[str, Any]]:
+        """Get status of all agents."""
+        # TODO: Implement agent status gathering
+        return []
     
-    def _load_agent_data(self):
-        """Load initial agent data."""
-        # TODO: Implement agent data loading
-        pass
+    async def action_quit(self) -> None:
+        """Handle quit action."""
+        self.console.print("\n[yellow]Shutting down...[/yellow]")
+        await self.shutdown()
+    
+    async def action_refresh(self) -> None:
+        """Handle manual refresh action."""
+        await self.update_metrics()
 
 def launch_dashboard(
     host: str = "127.0.0.1",
     port: int = 8501,
-    config: Dict[str, Any] = None,
-    open_browser: bool = True
+    config: Optional[Dict[str, Any]] = None
 ) -> None:
-    """Launch the dashboard interface.
+    """Launch the dashboard application.
     
     Args:
         host: Interface host address
-        port: Port number to serve on
-        config: Framework configuration
-        open_browser: Whether to open browser automatically
+        port: Port number
+        config: Optional configuration
     """
-    import streamlit.web.bootstrap as bootstrap
-    
-    # Store config for access by dashboard
-    if config:
-        st.session_state.config = config
-    
-    if open_browser:
-        webbrowser.open(f"http://{host}:{port}")
-    
-    # Launch dashboard
-    dashboard = Dashboard(config or {})
-    bootstrap.run(
-        lambda: dashboard.render(),
-        f"--server.address={host}",
-        f"--server.port={port}",
-        "--theme.primaryColor=#1f77b4",
-        "--theme.backgroundColor=#ffffff",
-        "--theme.secondaryBackgroundColor=#f0f2f6",
-        "--theme.textColor=#262730"
-    )
+    app = Dashboard(config)
+    app.run()
