@@ -5,18 +5,20 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 class Conversation:
-    """Handles dialogue management and response generation for AI agents.
+    """Manages dialogue and response generation for AI agents.
     
-    Manages conversation history, generates contextual responses, and
-    maintains conversation state. Implements basic dialogue management
-    patterns with configurable memory and processing options.
+    Handles conversation history, message tracking, and response generation
+    with configurable constraints and validation.
     """
+    
+    VALID_ROLES = {'user', 'assistant', 'system'}
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {
             'max_history': 10,
             'max_response_length': 1000,
-            'keep_timestamps': True
+            'keep_timestamps': True,
+            'response_format': 'text'
         }
         self.history: List[Dict[str, Any]] = []
         self._setup_logging()
@@ -26,15 +28,27 @@ class Conversation:
         self.logger = logging.getLogger(f'{__name__}.{self.__class__.__name__}')
         self.logger.setLevel(logging.INFO)
     
-    def add_message(self, message: str, role: str = 'user') -> None:
-        """Add a message to the conversation history.
+    def add_message(self, message: str, role: str) -> None:
+        """Add a validated message to the conversation history.
         
         Args:
             message: The message content
-            role: Role of the message sender ('user' or 'assistant')
+            role: Role of the message sender
+            
+        Raises:
+            ValueError: If message is empty or role is invalid
         """
+        # Validate message
+        if not message or not message.strip():
+            raise ValueError('Message cannot be empty')
+            
+        # Validate role
+        if role not in self.VALID_ROLES:
+            raise ValueError(f'Invalid role. Must be one of: {self.VALID_ROLES}')
+        
+        # Create message entry
         entry = {
-            'content': message,
+            'content': message.strip(),
             'role': role
         }
         
@@ -43,9 +57,13 @@ class Conversation:
         
         self.history.append(entry)
         
-        # Trim history if it exceeds max length
+        # Trim history if needed
         if len(self.history) > self.config['max_history']:
             self.history = self.history[-self.config['max_history']:]
+            
+        self.logger.debug(
+            f'Added message from {role} (history size: {len(self.history)})'
+        )
     
     def generate_response(self, user_input: str) -> str:
         """Generate a response based on user input and conversation history.
@@ -59,8 +77,12 @@ class Conversation:
         # Add user input to history
         self.add_message(user_input, 'user')
         
-        # Generate response (placeholder for actual implementation)
+        # Generate response
         response = self._process_input(user_input)
+        
+        # Validate response length
+        if len(response) > self.config['max_response_length']:
+            response = response[:self.config['max_response_length']] + '...'
         
         # Add response to history
         self.add_message(response, 'assistant')
@@ -70,8 +92,8 @@ class Conversation:
     def _process_input(self, user_input: str) -> str:
         """Process user input and generate appropriate response.
         
-        This is a placeholder method that should be overridden or 
-        extended with actual NLP/ML processing logic.
+        This is a placeholder method that should be overridden with
+        actual NLP/ML processing logic.
         
         Args:
             user_input: The user's input message
@@ -79,7 +101,6 @@ class Conversation:
         Returns:
             Generated response string
         """
-        # Placeholder response generation
         return f'Processed response to: {user_input}'
     
     def get_context(self, message_count: Optional[int] = None) -> List[Dict[str, Any]]:
