@@ -2,8 +2,9 @@ include LICENSE
 include README.md
 include pyproject.toml
 
-recursive-include seed *.py
 recursive-include seed/config *.yaml
+recursive-include seed/templates *.md
+recursive-include seed *.py
 
 exclude *.pyc
 exclude __pycache__
